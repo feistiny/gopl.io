@@ -14,11 +14,15 @@ import (
 	"os"
 )
 
+type tLineMap map[string]int
+type tFileMap map[string]tLineMap
+
+var fileCounts = make(tFileMap)
+
 func main() {
-	counts := make(map[string]int)
 	files := os.Args[1:]
 	if len(files) == 0 {
-		countLines(os.Stdin, counts)
+		countLines(os.Stdin, getFileCounts("stdin"))
 	} else {
 		for _, arg := range files {
 			f, err := os.Open(arg)
@@ -26,13 +30,15 @@ func main() {
 				fmt.Fprintf(os.Stderr, "dup2: %v\n", err)
 				continue
 			}
-			countLines(f, counts)
+			countLines(f, getFileCounts(arg))
 			f.Close()
 		}
 	}
-	for line, n := range counts {
-		if n > 1 {
-			fmt.Printf("%d\t%s\n", n, line)
+	for filename, counts := range fileCounts {
+		for line, n := range counts {
+			if n > 1 {
+				fmt.Printf("%s\t%d\t%s\n", filename, n, line)
+			}
 		}
 	}
 }
@@ -43,6 +49,11 @@ func countLines(f *os.File, counts map[string]int) {
 		counts[input.Text()]++
 	}
 	// NOTE: ignoring potential errors from input.Err()
+}
+
+func getFileCounts(filename string) tLineMap {
+	fileCounts[filename] = make(tLineMap)
+	return fileCounts[filename]
 }
 
 //!-
